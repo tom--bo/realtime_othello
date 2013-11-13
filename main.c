@@ -1,5 +1,8 @@
 #include "itcfunc.h"
+#define N 20
 
+int ArrayEnqueue(int *queue, int data, int *head, int *tail, size_t n);
+int ArrayDequeue(int *queue, int *head, int *tail, size_t n);
 // 盤上のOとXの数
 int O;
 int X;
@@ -136,6 +139,9 @@ int main() {
 	int *counter_reg=(int *)0x010c;
 	char *key_reg=(char *)0x0110;
 	int cursol_x=8, cursol_y=4;
+    int queue[N];
+    int head=0, tail=0;
+    int data;
 	int color=0;
 	lcd_ttyopen(1);
 	while(1){
@@ -145,6 +151,23 @@ int main() {
 
 		// キー入力条件(WSADJK)
 		if( key_val & 0x20){         //w
+
+
+		lcd_locate(1,14);
+
+
+	    /* 配列にエンキューする */
+	    ArrayEnqueue(queue, 10, &head, &tail, N);
+	    ArrayEnqueue(queue, 20, &head, &tail, N);
+	    ArrayEnqueue(queue, 30, &head, &tail, N);
+	    ArrayEnqueue(queue, 40, &head, &tail, N);
+	    /* 配列からデキューする */
+		lcd_printf("%d", tail - head);
+	    while ( tail - head ) {
+	        data = ArrayDequeue(queue, &head, &tail, N);
+	    }
+
+
 		}else if( key_val & 0x10){   //s
 			if(!isOut(cursol_x-2, cursol_y)) cursol_x-=2;
 		}else if( key_val & 0x08){   //a
@@ -167,4 +190,26 @@ int main() {
 }
 
 
+
+
+
+//queueの実装
+// 参考: http://www.c-tipsref.com/tips/array/queue.html
+
+int ArrayEnqueue(int *queue, int data, int *head, int *tail, size_t n) {
+    if (*head % n != (*tail + 1) % n) {
+        queue[(*tail)++ % n] = data;
+        return *tail - *head;
+    } else {
+        return 0;
+    }
+}
+
+int ArrayDequeue(int *queue, int *head, int *tail, size_t n) {
+    if (*head != *tail) {
+        return queue[(*head)++ % n];
+    } else {
+        return 0;
+    }
+}
 
