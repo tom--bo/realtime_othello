@@ -112,15 +112,15 @@ int selectDifficulty(int Step_num) {
 	lcd_locate(11,3);
 	lcd_printf("EASY");
 	if(Step_num==0) lcd_printf("     <--");
-	else lcd_printf("       ");
+	else lcd_printf("        ");
 	lcd_locate(11,4);
 	lcd_printf("NORMAL");
 	if(Step_num==1) lcd_printf("   <--");
-	else lcd_printf("       ");
+	else lcd_printf("        ");
 	lcd_locate(11,5);
 	lcd_printf("HARD");
 	if(Step_num==2) lcd_printf("     <--");
-	else lcd_printf("       ");
+	else lcd_printf("        ");
 
 	lcd_locate(14,7);
 	lcd_printf("_____________");
@@ -141,7 +141,7 @@ int startGame(int count){
 
 	lcd_locate(10,1);
 	lcd_printf("Start Game !!");
-	lcd_locate(18,2);
+	lcd_locate(18,4);
 	lcd_printf("%d", count);
 
 	lcd_locate(14,6);
@@ -162,9 +162,7 @@ int startGame(int count){
 	lcd_printf(" ------------");
 
 	return 0;
-
 }
-
 
 
 int output(int counter_val, int color, int cursol_x, int cursol_y) {
@@ -279,6 +277,7 @@ int main() {
 		}
 		selectDifficulty(Step_num);
 	}
+	lcd_ttyopen(1);
 
 	counter_val=*counter_reg;
 	while(1){
@@ -286,7 +285,9 @@ int main() {
 		if(count - counter_val > 400000) break;
 		startGame(4-(count - counter_val)/100000);
 	}
+	lcd_ttyopen(1);
 
+	counter_val=*counter_reg;
 	count = counter_val;
 	while(1){
 	// キーとカウンタ取得
@@ -337,8 +338,4 @@ int ArrayDequeue(int *queue, int *head, int *tail, size_t n) {
         return 0;
     }
 }
-
-
-
-
 
