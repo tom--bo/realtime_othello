@@ -47,6 +47,7 @@ int countDisc(){
 }
 
 int canPut(int x, int y, char p){
+	if(board[y][x] != '.') return 0;
 	int i=0,j;
 	int x0, y0, x2, y2;
 	for(;i<8;i++){
@@ -98,9 +99,8 @@ int put(int x, int y, char p){
 	return 0;
 }
 
-
 int output(int counter_val, int color, int cursol_x, int cursol_y) {
-	if(counter_val > 5000000){
+	if(counter_val > 10000000){  //100sで終了
 		if(End_flag) return 0;
 		lcd_setcolor(0xff);
 		countDisc();
@@ -135,46 +135,62 @@ int output(int counter_val, int color, int cursol_x, int cursol_y) {
 	return 1;
 }
 
+int turnComputer(){
+	int i,j;
+    int queue_x[N], queue_y[N];
+    int head_x=0, tail_x=0, head_y=0, tail_y=0;
+    int length, choice;
+	// 置けるマスを検索
+	for(i=1; i<9; i++){
+		for(j=1; j<16; j+=2){
+			if(canPut(j, i, 'x')){
+				ArrayEnqueue(queue_x, j, &head_x, &tail_x, N);
+				ArrayEnqueue(queue_y, i, &head_y, &tail_y, N);
+			}
+		}
+	}
+			// choice の選択を書く
+	length = tail_x - head_x;
+	if(length){
+		choice = rand()%length;
+		for(i=0;i<length;i++){
+			if(i==choice) put(ArrayDequeue(queue_x, &head_x, &tail_x, N), ArrayDequeue(queue_y, &head_y, &tail_y, N), 'x');
+			else{
+				ArrayDequeue(queue_x, &head_x, &tail_x, N);
+				ArrayDequeue(queue_y, &head_y, &tail_y, N);
+			}
+		}
+	}
+	return 0;
+}
+
+
+
 int main() {
 	int *counter_reg=(int *)0x010c;
 	char *key_reg=(char *)0x0110;
 	int cursol_x=8, cursol_y=4;
-    int queue[N];
-    int head=0, tail=0;
-    int data;
+	int count=0;
+	int com_strength = 200000;
+
 	int color=0;
 	lcd_ttyopen(1);
 	while(1){
 	// キーとカウンタ取得
 		int counter_val=*counter_reg;
 		char key_val=*key_reg;
-
+		if(counter_val - count > com_strength){
+			turnComputer();
+			count+=com_strength;
+		}
 		// キー入力条件(WSADJK)
 		if( key_val & 0x20){         //w
-
-
-		lcd_locate(1,14);
-
-
-	    /* 配列にエンキューする */
-	    ArrayEnqueue(queue, 10, &head, &tail, N);
-	    ArrayEnqueue(queue, 20, &head, &tail, N);
-	    ArrayEnqueue(queue, 30, &head, &tail, N);
-	    ArrayEnqueue(queue, 40, &head, &tail, N);
-	    /* 配列からデキューする */
-		lcd_printf("%d", tail - head);
-	    while ( tail - head ) {
-	        data = ArrayDequeue(queue, &head, &tail, N);
-	    }
-
+			//強制的に中断。（置くところがなくなった時)
 
 		}else if( key_val & 0x10){   //s
 			if(!isOut(cursol_x-2, cursol_y)) cursol_x-=2;
 		}else if( key_val & 0x08){   //a
 			put(cursol_x-1, cursol_y, 'o');
-			// if(canPut(cursol_x-1, cursol_y, 'o')) board[cursol_y][cursol_x-1] = 'o';
-			// else{
-			// }
 		}else if( key_val & 0x04){   //d
 			if(!isOut(cursol_x+2, cursol_y)) cursol_x+=2;
 		}else if( key_val & 0x02){   //j
@@ -188,10 +204,6 @@ int main() {
 	// while (1);
 	return 0;
 }
-
-
-
-
 
 //queueの実装
 // 参考: http://www.c-tipsref.com/tips/array/queue.html
@@ -212,4 +224,8 @@ int ArrayDequeue(int *queue, int *head, int *tail, size_t n) {
         return 0;
     }
 }
+
+
+
+
 
