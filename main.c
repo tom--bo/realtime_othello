@@ -1,11 +1,13 @@
 #include "itcfunc.h"
 #define N 20
+#define Limit 10000000
 
 int ArrayEnqueue(int *queue, int data, int *head, int *tail, size_t n);
 int ArrayDequeue(int *queue, int *head, int *tail, size_t n);
 // 盤上のOとXの数
-int O;
-int X;
+int O = 4;
+int X = 4;
+int com_strength = 300000;
 int dir[8][2] = {
 		{-2, -1}, {0, -1}, {2, -1},
 		{-2, 0},         {2, 0},
@@ -14,14 +16,14 @@ int dir[8][2] = {
 int End_flag=0;
 char *board[10] = {
 	"*----------------*",   
-	"|. . . . . . . . |1", //1,1
-	"|. . . . . . . . |2",
-	"|. . . o . . . . |3",
-	"|. . . x o x . . |4",
-	"|. . x o x . . . |5",
-	"|. . . . o . . . |6",
-	"|. . . . . . . . |7",
-	"|. . . . . . . . |8", //8,15
+	"|. . . . . . . . |1   ___________", //1,1
+	"|. . . . . . . . |2  |k -> Up    |",
+	"|. . . o . . . . |3  |j -> Down  |",
+	"|. . . x o x . . |4  |d -> Right |",
+	"|. . x o x . . . |5  |s -> Left  |",
+	"|. . . . o . . . |6  |a -> Put   |",
+	"|. . . . . . . . |7  |w -> End   |",
+	"|. . . . . . . . |8   -----------", //8,15
 	"*----------------*"
 };
 
@@ -73,6 +75,7 @@ int canPut(int x, int y, char p){
 int put(int x, int y, char p){
 	int i=0,j,k;
 	int x0, y0, x2, y2, x3, y3;
+	if(board[y][x]!='.') return 0;
 	for(;i<8;i++){
 		x0=x+dir[i][0];
 		y0=y+dir[i][1];
@@ -96,39 +99,57 @@ int put(int x, int y, char p){
 			}
 		}
 	}
+	countDisc();
 	return 0;
 }
 
 int output(int counter_val, int color, int cursol_x, int cursol_y) {
-	if(counter_val > 10000000){  //100sで終了
+	if(counter_val > Limit){  //100sで終了
 		if(End_flag) return 0;
 		lcd_setcolor(0xff);
 		countDisc();
-		lcd_locate(0,0);
+		lcd_locate(1,11);
 		lcd_printf("o: %d", O);
-		lcd_locate(0,1);
+		lcd_locate(1,12);
 		lcd_printf("x: %d", X);
-		lcd_locate(0,2);
+		lcd_locate(1,13);
 		if(O>X) lcd_printf("YOU WIN!!");
 		else if(O==X) lcd_printf("DRAW GAME");
 		else lcd_printf("YOU LOSE!!");
 		End_flag=1;
+		while(1){}
 	}else{
 		lcd_locate(20,12);
-		lcd_printf("%d",counter_val);
+		lcd_printf("Left time: %d",(Limit-counter_val)/100000);
 		board[cursol_y][cursol_x] = '<';
+		lcd_locate(4,1); lcd_printf(board[0]);
+		lcd_locate(4,2); lcd_printf(board[1]);
+		lcd_locate(4,3); lcd_printf(board[2]);
+		lcd_locate(4,4); lcd_printf(board[3]);
+		lcd_locate(4,5); lcd_printf(board[4]);
+		lcd_locate(4,6); lcd_printf(board[5]);
+		lcd_locate(4,7); lcd_printf(board[6]);
+		lcd_locate(4,8); lcd_printf(board[7]);
+		lcd_locate(4,9); lcd_printf(board[8]);
+		lcd_locate(4,10); lcd_printf(board[9]);
 
-		lcd_locate(1,1); lcd_printf(board[0]);
-		lcd_locate(1,2); lcd_printf(board[1]);
-		lcd_locate(1,3); lcd_printf(board[2]);
-		lcd_locate(1,4); lcd_printf(board[3]);
-		lcd_locate(1,5); lcd_printf(board[4]);
-		lcd_locate(1,6); lcd_printf(board[5]);
-		lcd_locate(1,7); lcd_printf(board[6]);
-		lcd_locate(1,8); lcd_printf(board[7]);
-		lcd_locate(1,9); lcd_printf(board[8]);
-		lcd_locate(1,10); lcd_printf(board[9]);
-		lcd_locate(0,12); lcd_printf("x, y = %d, %d", cursol_x, cursol_y);
+		lcd_locate(1,11);
+		lcd_printf("o: %d", O);
+		lcd_locate(1,12);
+		lcd_printf("x: %d", X);
+/*
+		for(y=1;y<11;y++){
+			for(x=1;x<11;x++){
+				if(board[y-1][x-1] == 'x') lcd_setcolor(0x70);
+				else if(board[y-1][x-1] == 'o') lcd_setcolor(0x80);
+				else lcd_setcolor(0xff);
+				lcd_locate(x,y);
+				lcd_printf(&board[y-1][x-1]);
+			}
+		}
+*/
+
+		// lcd_locate(0,12); lcd_printf("x, y = %d, %d", cursol_x, cursol_y);
 
 		board[cursol_y][cursol_x] = ' ';
 	}
@@ -171,7 +192,6 @@ int main() {
 	char *key_reg=(char *)0x0110;
 	int cursol_x=8, cursol_y=4;
 	int count=0;
-	int com_strength = 200000;
 
 	int color=0;
 	lcd_ttyopen(1);
@@ -186,7 +206,7 @@ int main() {
 		// キー入力条件(WSADJK)
 		if( key_val & 0x20){         //w
 			//強制的に中断。（置くところがなくなった時)
-
+			counter_val+=10000000;
 		}else if( key_val & 0x10){   //s
 			if(!isOut(cursol_x-2, cursol_y)) cursol_x-=2;
 		}else if( key_val & 0x08){   //a
