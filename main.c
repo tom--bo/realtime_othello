@@ -255,6 +255,7 @@ int main() {
 	int counter_val=*counter_reg;
 	int count=0;
 	int color=0;
+	int r_seed=0;
 	lcd_ttyopen(1);
 
 	while(1){
@@ -279,7 +280,12 @@ int main() {
 	}
 	lcd_ttyopen(1);
 
+	// randの種の生成
 	counter_val=*counter_reg;
+	r_seed=counter_val%100+1;
+	srand(r_seed);
+
+
 	while(1){
 		count=*counter_reg;
 		if(count - counter_val > 400000) break;
