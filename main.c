@@ -19,12 +19,12 @@ int End_flag=0;
 char *board[10] = {
 	"*----------------*",   
 	"|. . . . . . . . |1   ___________", //1,1
-	"|. . . . . . . . |2  |k -> Up    |",
-	"|. . . o . . . . |3  |j -> Down  |",
+	"|. . . . . . . . |2  |w -> Up    |",
+	"|. . . o . . . . |3  |s -> Down  |",
 	"|. . . x o x . . |4  |d -> Right |",
-	"|. . x o x . . . |5  |s -> Left  |",
-	"|. . . . o . . . |6  |a -> Put   |",
-	"|. . . . . . . . |7  |w -> End   |",
+	"|. . x o x . . . |5  |a -> Left  |",
+	"|. . . . o . . . |6  |j -> Put   |",
+	"|. . . . . . . . |7  |k -> End   |",
 	"|. . . . . . . . |8   -----------", //8,15
 	"*----------------*"
 };
@@ -125,11 +125,11 @@ int selectDifficulty(int Step_num) {
 	lcd_locate(14,7);
 	lcd_printf("_____________");
 	lcd_locate(14,8);
-	lcd_printf("|k -> Up    |");
+	lcd_printf("|w -> Up     |");
 	lcd_locate(14,9);
-	lcd_printf("|j -> Down  |");
+	lcd_printf("|s -> Down   |");
 	lcd_locate(14,10);
-	lcd_printf("|a -> Put   |");
+	lcd_printf("|j -> Select |");
 	lcd_locate(14,11);
 	lcd_printf(" ------------");
 
@@ -147,17 +147,17 @@ int startGame(int count){
 	lcd_locate(14,6);
 	lcd_printf("_____________");
 	lcd_locate(14,7);
-	lcd_printf("|k -> Up    |");
+	lcd_printf("|w -> Up    |");
 	lcd_locate(14,8);
-	lcd_printf("|j -> Down  |");
+	lcd_printf("|s -> Down  |");
 	lcd_locate(14,9);
 	lcd_printf("|d -> Right |");
 	lcd_locate(14,10);
-	lcd_printf("|s -> Left  |");
+	lcd_printf("|a -> Left  |");
 	lcd_locate(14,11);
-	lcd_printf("|a -> Put   |");
+	lcd_printf("|j -> Put   |");
 	lcd_locate(14,12);
-	lcd_printf("|w -> End   |");
+	lcd_printf("|k -> End   |");
 	lcd_locate(14,13);
 	lcd_printf(" ------------");
 
@@ -171,9 +171,9 @@ int output(int counter_val, int color, int cursol_x, int cursol_y) {
 		lcd_setcolor(0xff);
 		countDisc();
 		lcd_locate(2,12);
-		lcd_printf("o: %d", O);
+		lcd_printf("o: %2d", O);
 		lcd_locate(2,13);
-		lcd_printf("x: %d", X);
+		lcd_printf("x: %2d", X);
 		lcd_locate(4,14);
 		if(O>X) lcd_printf("YOU WIN!!");
 		else if(O==X) lcd_printf("DRAW GAME");
@@ -195,10 +195,19 @@ int output(int counter_val, int color, int cursol_x, int cursol_y) {
 		lcd_locate(4,9); lcd_printf(board[8]);
 		lcd_locate(4,10); lcd_printf(board[9]);
 
-		lcd_locate(1,12);
-		lcd_printf("o: %d", O);
-		lcd_locate(1,13);
-		lcd_printf("x: %d", X);
+		lcd_locate(2,12);
+		lcd_printf("o: %2d", O);
+		lcd_locate(2,13);
+		lcd_printf("x: %2d", X);
+		lcd_locate(4,14);
+		if(O+X > 63){
+			if(O>X) lcd_printf("YOU WIN!!");
+			else if(O==X) lcd_printf("DRAW GAME");
+			else lcd_printf("YOU LOSE!!");
+			End_flag=1;
+			while(1){}
+		}
+
 /*
 		for(y=1;y<11;y++){
 			for(x=1;x<11;x++){
@@ -223,15 +232,30 @@ int turnComputer(){
     int head_x=0, tail_x=0, head_y=0, tail_y=0;
     int length, choice;
 	// 置けるマスを検索
-	for(i=1; i<9; i++){
-		for(j=1; j<16; j+=2){
-			if(canPut(j, i, 'x')){
-				ArrayEnqueue(queue_x, j, &head_x, &tail_x, N);
-				ArrayEnqueue(queue_y, i, &head_y, &tail_y, N);
-			}
-		}
-	}
-			// choice の選択を書く
+    if(Com_strength > 150000){
+    	for(i=1; i<9; i++){
+    		for(j=1; j<16; j+=2){
+    			if(canPut(j, i, 'x')){
+    				ArrayEnqueue(queue_x, j, &head_x, &tail_x, N);
+    				ArrayEnqueue(queue_y, i, &head_y, &tail_y, N);
+    			}
+    		}
+    	}
+    }else{
+    	for(i=1; i<9; i++){
+    		for(j=1; j<16; j+=2){
+    			if(canPut(j, i, 'x')){
+    				if((i == 1 && j == 1) || (i == 1 && j == 15) || (i == 15 && j == 1) || (i == 15 && j == 15)){
+    					put(j, i, 'x');
+    				} 
+    				ArrayEnqueue(queue_x, j, &head_x, &tail_x, N);
+    				ArrayEnqueue(queue_y, i, &head_y, &tail_y, N);
+    			}
+    		}
+    	}
+    }
+
+	// choice の選択を書く
 	length = tail_x - head_x;
 	if(length){
 		choice = rand()%length;
@@ -246,55 +270,65 @@ int turnComputer(){
 	return 0;
 }
 
-
-
 int main() {
 	int *counter_reg=(int *)0x010c;
 	char *key_reg=(char *)0x0110;
 	int cursol_x=8, cursol_y=4;
+	int before_time=100;
+	int present_time;
 	int counter_val=*counter_reg;
 	int count=0;
 	int color=0;
 	int r_seed=0;
 	lcd_ttyopen(1);
 
+
+//　難易度選択の場面
+	selectDifficulty(Step_num);
 	while(1){
 		char key_val=*key_reg;
 		// キー入力条件(WSADJK)
 		if( key_val & 0x20){         //w
+			if(Step_num) Step_num--;
+			selectDifficulty(Step_num);
 		}else if( key_val & 0x10){   //s
+			if(Step_num!=2) Step_num++;
+			selectDifficulty(Step_num);
 		}else if( key_val & 0x08){   //a
+		}else if( key_val & 0x04){   //d
+		}else if( key_val & 0x02){   //j
 			switch(Step_num){
 				case 0: Com_strength=400000; break;
 				case 1: Com_strength=300000; break;
-				case 2: Com_strength=200000; break;
+				case 2: Com_strength=150000; break;
 			}
 			break;
-		}else if( key_val & 0x04){   //d
-		}else if( key_val & 0x02){   //j
-			if(Step_num!=2) Step_num++;
 		}else if( key_val & 0x01){   //k
-			if(Step_num) Step_num--;
 		}
-		selectDifficulty(Step_num);
 	}
 	lcd_ttyopen(1);
 
-	// randの種の生成
+// randの種の生成
 	counter_val=*counter_reg;
 	r_seed=counter_val%100+1;
 	srand(r_seed);
 
 
+// ゲーム開始までのカウントダウン
 	while(1){
 		count=*counter_reg;
-		if(count - counter_val > 400000) break;
-		startGame(4-(count - counter_val)/100000);
+		if(count - counter_val > 300000) break;
+		present_time = 3-(count - counter_val)/100000;
+		if(present_time != before_time){
+			before_time = present_time;
+			startGame(present_time);
+		}
 	}
 	lcd_ttyopen(1);
 
 	counter_val=*counter_reg;
 	count = counter_val;
+	output(counter_val, color, cursol_x, cursol_y);
 	while(1){
 	// キーとカウンタ取得
 		char key_val=*key_reg;
@@ -302,23 +336,53 @@ int main() {
 		if(counter_val - count > Com_strength){
 			turnComputer();
 			count+=Com_strength;
+			output(counter_val, color, cursol_x, cursol_y);
 		}
+		// キー入力条件(WSADJK)
+// wasdが十字キーのバージョン
+		if( key_val & 0x01){         //w
+			//強制的に中断。（置くところがなくなった時)
+			counter_val+=10000000;
+			output(counter_val, color, cursol_x, cursol_y);
+		}else if( key_val & 0x08){   //s
+			if(!isOut(cursol_x-2, cursol_y)) cursol_x-=2;
+			output(counter_val, color, cursol_x, cursol_y);
+		}else if( key_val & 0x02){   //a
+			put(cursol_x-1, cursol_y, 'o');
+			output(counter_val, color, cursol_x, cursol_y);
+		}else if( key_val & 0x04){   //d
+			if(!isOut(cursol_x+2, cursol_y)) cursol_x+=2;
+			output(counter_val, color, cursol_x, cursol_y);
+		}else if( key_val & 0x10){   //j
+			if(!isOut(cursol_x, cursol_y+1)) cursol_y++;
+			output(counter_val, color, cursol_x, cursol_y);
+		}else if( key_val & 0x20){   //k
+			if(!isOut(cursol_x, cursol_y-1)) cursol_y--;
+			output(counter_val, color, cursol_x, cursol_y);
+		}
+/*
 		// キー入力条件(WSADJK)
 		if( key_val & 0x20){         //w
 			//強制的に中断。（置くところがなくなった時)
 			counter_val+=10000000;
+			output(counter_val, color, cursol_x, cursol_y);
 		}else if( key_val & 0x10){   //s
 			if(!isOut(cursol_x-2, cursol_y)) cursol_x-=2;
+			output(counter_val, color, cursol_x, cursol_y);
 		}else if( key_val & 0x08){   //a
 			put(cursol_x-1, cursol_y, 'o');
+			output(counter_val, color, cursol_x, cursol_y);
 		}else if( key_val & 0x04){   //d
 			if(!isOut(cursol_x+2, cursol_y)) cursol_x+=2;
+			output(counter_val, color, cursol_x, cursol_y);
 		}else if( key_val & 0x02){   //j
 			if(!isOut(cursol_x, cursol_y+1)) cursol_y++;
+			output(counter_val, color, cursol_x, cursol_y);
 		}else if( key_val & 0x01){   //k
 			if(!isOut(cursol_x, cursol_y-1)) cursol_y--;
+			output(counter_val, color, cursol_x, cursol_y);
 		}
-		output(counter_val, color, cursol_x, cursol_y);
+*/
 	}
 	lcd_ttyclose();
 	// while (1);
